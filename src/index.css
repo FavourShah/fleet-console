@@ -1,0 +1,23 @@
+@import "leaflet/dist/leaflet.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { @apply bg-slate-100 text-ink font-sans antialiased; font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+
+@layer components {
+  .btn { @apply inline-flex items-center gap-1.5 rounded border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent; }
+  .btn-primary { @apply border-accent bg-accent text-white hover:bg-accent-dark; }
+  .btn-danger { @apply border-st-alert text-st-alert hover:bg-red-50; }
+  .input { @apply w-full rounded border border-line bg-white px-2.5 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent; }
+  .label { @apply mb-1 block text-xs font-medium text-ink-2; }
+  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3 border-b border-line bg-slate-50 sticky top-0; }
+  .td { @apply px-3 py-2 text-sm border-b border-slate-100; }
+  .panel { @apply rounded-lg border border-line bg-panel shadow-sm; }
+}
+
+.veh-marker { display:flex; align-items:center; justify-content:center; }
+.veh-marker span { display:block; padding:1px 5px; border-radius:4px; font-size:11px; font-weight:600; color:#fff; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.4); white-space:nowrap; }
+.leaflet-container { font-family: inherit; }
