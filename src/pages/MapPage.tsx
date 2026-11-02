@@ -9,6 +9,21 @@ import { ago, vehicleStatus, type VStatus } from "../lib/format";
 
 const STALE_MS = 60_000;
 
+function Legend() {
+  const item = (c: string, t: string, dashed = false) => (
+    <span key={t} className="inline-flex items-center gap-1.5">
+      <span className="h-2.5 w-2.5 rounded-sm" style={{ background: dashed ? "transparent" : c, border: `2px ${dashed ? "dashed" : "solid"} ${c}` }} aria-hidden />{t}
+    </span>
+  );
+  return (
+    <div className="panel pointer-events-none absolute bottom-3 left-[23rem] z-[1000] hidden items-center gap-4 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-ink-2 xl:flex" aria-label="Map legend">
+      <span className="flex items-center gap-3"><b className="text-ink">Trucks</b>{item("#15803d", "Moving")}{item("#b45309", "Idle")}{item("#6b7280", "Offline")}{item("#c01f2f", "High or critical alert")}</span>
+      <span className="h-4 w-px bg-line" aria-hidden />
+      <span className="flex items-center gap-3"><b className="text-ink">Zones</b>{item("#0b5fff", "Depot")}{item("#7c3aed", "Customer")}{item("#c01f2f", "Restricted", true)}{item("#4b5563", "Other")}</span>
+    </div>
+  );
+}
+
 export default function MapPage() {
   const live = useLive();
   const now = useNow(5000);
@@ -18,7 +33,10 @@ export default function MapPage() {
   const [depot, setDepot] = useState("");
   const [selected, setSelected] = useState<string>();
   const [focus, setFocus] = useState<{ lat: number; lon: number; n: number }>();
-  const [panel, setPanel] = useState(true);
+  const [panel, setPanel] = useState(() => window.innerWidth >= 768); // list starts closed on phones
+  const [clusterPref, setClusterPref] = useState<boolean | null>(null); // null = automatic
+  const [showZones, setShowZones] = useState(true);
+  const cluster = clusterPref ?? live.vehicles.length > 200;
 
   const depots = useMemo(() => Array.from(new Set(live.vehicles.map((v) => v.depot).filter(Boolean))).sort(), [live.vehicles]);
 
@@ -45,20 +63,20 @@ export default function MapPage() {
 
   return (
     <div className="relative h-full">
-      <MapView vehicles={filtered} alertIds={live.alertVehicleIds} geofences={geofences.data?.data}
+      <MapView vehicles={filtered} alertIds={live.alertVehicleIds} geofences={showZones ? geofences.data?.data : undefined} cluster={cluster}
         selectedId={selected} onSelect={setSelected} focus={focus} />
 
       {/* KPI strip */}
       <div className="pointer-events-none absolute left-0 right-0 top-0 z-[1000] flex flex-col items-center gap-2 p-3">
         <div className="panel pointer-events-auto flex divide-x divide-line overflow-x-auto">
           <Stat label="Online" value={`${online}/${live.vehicles.length}`} />
-          <Stat label="Active trips" value={activeTrips} />
-          <Stat label="Open alerts" value={live.openAlerts.length} tone={live.openAlerts.length ? "bad" : undefined} />
+          <Stat label="Active trips" value={activeTrips} to="/trips?status=active" />
+          <Stat label="Open alerts" value={live.openAlerts.length} tone={live.openAlerts.length ? "bad" : undefined} to="/alerts" />
           <Stat label="Last data" value={newest ? ago(new Date(newest).toISOString(), now) : "—"} tone={stale ? "bad" : undefined} />
         </div>
         {live.socket !== "open" && (
-          <div className="pointer-events-auto rounded border border-amber-400 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900" role="status">
-            {live.socket === "connecting" ? "Connecting to live feed…" : "Live feed disconnected — refreshing every 5 seconds instead."}
+          <div className="pointer-events-auto rounded border border-line bg-white px-3 py-1.5 text-sm text-ink-2 shadow-sm" role="status">
+            {live.socket === "connecting" ? "Connecting to live feed…" : "Live socket not connected. Refreshing every 5 seconds."}
           </div>
         )}
         {live.socket === "open" && stale && (
@@ -83,6 +101,10 @@ export default function MapPage() {
                   <option value="">All depots</option>{depots.map((d) => <option key={d}>{d}</option>)}
                 </select>
               </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-2">
+                <label className="inline-flex items-center gap-1.5"><input type="checkbox" checked={showZones} onChange={(e) => setShowZones(e.target.checked)} />Show zones</label>
+                <label className="inline-flex items-center gap-1.5" title="Group nearby trucks. Switches on by itself above 200 trucks."><input type="checkbox" checked={cluster} onChange={(e) => setClusterPref(e.target.checked)} />Group nearby trucks</label>
+              </div>
               <div className="text-xs text-ink-3">{filtered.length} of {live.vehicles.length} vehicles</div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -104,6 +126,8 @@ export default function MapPage() {
           </div>
         )}
       </div>
+
+      <Legend />
 
       {selected && <VehicleDrawer id={selected} onClose={() => setSelected(undefined)} onCentre={(lat, lon) => setFocus({ lat, lon, n: Date.now() })} />}
     </div>

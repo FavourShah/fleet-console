@@ -67,7 +67,9 @@ const server = http.createServer(async (req, res) => {
   if ((m = /^\/vehicles\/([^/]+)\/events$/.exec(p))) return send(res, 200, { data: [{ kind: "alert", type: "geofence_exit", severity: "high", status: "open", at: new Date(Date.now() - 600e3).toISOString() }, { kind: "geofence", type: "enter", name: "Apapa Depot", at: new Date(Date.now() - 4000e3).toISOString() }] });
   if ((m = /^\/vehicles\/([^/]+)\/history$/.exec(p))) {
     const v = vehicles.find((x) => x.id === m[1]); const n = 120;
-    return send(res, 200, { resolution: "30s", data: Array.from({ length: n }, (_, i) => ({ t: new Date(Date.now() - (n - i) * 30e3).toISOString(), lat: v.lat + Math.sin(i / 15) * 0.02 + i * 0.0001, lon: v.lon + i * 0.0003, speed_kph: 40 + 20 * Math.sin(i / 8), heading_deg: 90 })) });
+    // Includes a stop (points 40-60) and a data gap (points 85-95) so the timeline has all three states.
+    const data = Array.from({ length: n }, (_, i) => ({ t: new Date(Date.now() - (n - i) * 30e3).toISOString(), lat: v.lat + Math.sin(i / 15) * 0.02 + i * 0.0001, lon: v.lon + i * 0.0003, speed_kph: i >= 40 && i < 60 ? 0 : 40 + 20 * Math.sin(i / 8), heading_deg: 90 })).filter((_, i) => i < 85 || i >= 95);
+    return send(res, 200, { resolution: "30s", data });
   }
   if (p === "/geofences") {
     if (req.method === "POST") { if (!canMutate) return err(res, 403, "forbidden", "forbidden"); const b = JSON.parse(await readBody(req)); const g = { id: id(), kind: "other", ...b }; geofences.push(g); return send(res, 201, { id: g.id }); }

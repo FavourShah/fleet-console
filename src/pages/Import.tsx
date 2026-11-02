@@ -78,5 +78,5 @@ export default function Import() {
   );
 }
 function Count({ l, n, bad }: { l: string; n: number; bad?: boolean }) {
-  return <div><div className="text-xs uppercase tracking-wide text-ink-3">{l}</div><div className={`num text-2xl font-semibold ${bad ? "text-st-alert" : ""}`}>{n.toLocaleString()}</div></div>;
+  return <div><div className="text-xs text-ink-3">{l}</div><div className={`num font-display text-3xl font-semibold ${bad ? "text-st-alert" : ""}`}>{n.toLocaleString()}</div></div>;
 }

@@ -40,6 +40,8 @@ export const SEV_CLASS: Record<AlertSeverity, string> = {
   critical: "bg-red-50 text-red-800 border-red-400",
 };
 
+export const SEV_BAR: Record<AlertSeverity, string> = { low: "#94a3b8", medium: "#d97706", high: "#ea580c", critical: "#c01f2f" };
+
 export function toLocalInput(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;

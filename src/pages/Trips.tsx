@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, errMsg } from "../lib/api";
 import { useAsync } from "../lib/hooks";
 import { useAuth } from "../lib/auth";
@@ -12,7 +13,8 @@ const TONE: Record<TripStatus, "neutral" | "ok" | "warn" | "bad"> = { planned: "
 
 export default function Trips() {
   const { can } = useAuth();
-  const [status, setStatus] = useState("");
+  const [sp] = useSearchParams();
+  const [status, setStatus] = useState(sp.get("status") ?? "");
   const [creating, setCreating] = useState(false);
   const [assigning, setAssigning] = useState<Trip>();
   const [busy, setBusy] = useState<string>();

@@ -5,7 +5,7 @@ import type { Role, User } from "./api-types";
 interface AuthCtx {
   user?: User;
   booting: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   can: (action: "mutate" | "ack" | "audit") => boolean;
 }
@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const r = await api.login(email, password);
     setUser(r.user);
+    return r.user;
   }, []);
 
   const logout = useCallback(async () => {

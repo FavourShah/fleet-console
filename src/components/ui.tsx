@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import type { AlertSeverity } from "../lib/api-types";
 import { SEV_CLASS, STATUS_COLOR, label, type VStatus } from "../lib/format";
 
@@ -62,11 +63,14 @@ export function Field({ label: l, children }: { label: string; children: ReactNo
   return <label className="block"><span className="label">{l}</span>{children}</label>;
 }
 
-export function Stat({ label: l, value, tone }: { label: string; value: ReactNode; tone?: "bad" }) {
-  return (
-    <div className="px-3 py-1.5">
-      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-3">{l}</div>
-      <div className={`num text-lg font-semibold leading-tight ${tone === "bad" ? "text-st-alert" : ""}`}>{value}</div>
-    </div>
+export function Stat({ label: l, value, tone, to }: { label: string; value: ReactNode; tone?: "bad"; to?: string }) {
+  const body = (
+    <>
+      <div className="text-xs font-medium text-ink-2">{l}</div>
+      <div className={`num font-display text-2xl font-semibold leading-none ${tone === "bad" ? "text-st-alert" : ""}`}>{value}</div>
+    </>
   );
+  return to
+    ? <Link to={to} className="block px-3 py-1.5 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" title={`Open ${l.toLowerCase()}`}>{body}</Link>
+    : <div className="px-3 py-1.5">{body}</div>;
 }

@@ -19,7 +19,7 @@ function Section({ name, data }: { name: string; data: Json }) {
   const entries = data && typeof data === "object" && !Array.isArray(data) ? Object.entries(data) : null;
   return (
     <div className="panel p-4">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">{label(name)}</h2>
+      <h2 className="mb-2 text-xs font-semibold text-ink-3">{label(name)}</h2>
       {entries ? <dl className="space-y-1.5 text-sm">{entries.map(([k, v]) => (
         <div key={k} className="flex items-start justify-between gap-4">
           <dt className="text-ink-2">{label(k)}</dt>

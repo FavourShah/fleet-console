@@ -72,7 +72,7 @@ export default function Geofences() {
               </li>))}</ul>)}
         </div>
         <div className="min-h-[300px] flex-1">
-          <MapView geofences={shown} fitGeofences onMapClick={draft ? (p) => setDraft({ ...draft, pts: [...draft.pts, p] }) : undefined} draft={draft?.pts} />
+          <MapView geofences={shown} highlightId={sel} fitGeofences onMapClick={draft ? (p) => setDraft({ ...draft, pts: [...draft.pts, p] }) : undefined} draft={draft?.pts} />
         </div>
       </div>
     </div>

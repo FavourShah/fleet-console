@@ -96,6 +96,8 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       } else if (m.type === "alert") {
         refreshAlerts();
         const a = m.alert as unknown as Record<string, string>;
+        // Only interrupt for urgent alerts; routine ones just update the count.
+        if (a.severity && a.severity !== "high" && a.severity !== "critical") return;
         const what = a.type ?? (a.event_type ? `geofence ${a.event_type}` : "alert");
         toastId += 1;
         setToast({ id: toastId, text: `${m.vehicle_id}: ${what.replace(/_/g, " ")}${a.geofence_name ? ` · ${a.geofence_name}` : ""}` });
@@ -129,7 +131,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const value = useMemo<LiveCtx>(() => ({
     vehicles: Array.from(byId.values()),
     loading, error, socket, lastMessageAt, openAlerts,
-    alertVehicleIds: new Set(openAlerts.map((a) => a.vehicle_id)),
+    alertVehicleIds: new Set(openAlerts.filter((a) => a.severity === "high" || a.severity === "critical").map((a) => a.vehicle_id)),
     toast, refresh, refreshAlerts,
   }), [byId, loading, error, socket, lastMessageAt, openAlerts, toast, refresh, refreshAlerts]);
 

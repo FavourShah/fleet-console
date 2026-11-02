@@ -52,7 +52,7 @@ export default function VehicleDrawer({ id, onClose, onCentre }: { id: string; o
               <Row k="Online" v={v.online ? "Yes" : "No"} />
             </dl>
             <div className="border-t border-line p-3">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Recent events</h3>
+              <h3 className="mb-2 text-xs font-semibold text-ink-3">Recent events</h3>
               {events.loading && !events.data ? <Loading /> : events.error ? <ErrorState message={events.error} onRetry={events.reload} /> :
                 !events.data?.data.length ? <p className="text-sm text-ink-3">No recent events.</p> :
                 <ul className="space-y-2">{events.data.data.slice(0, 15).map((e, i) => (

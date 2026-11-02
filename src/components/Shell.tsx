@@ -30,18 +30,18 @@ export default function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-full flex-col md:flex-row">
-      <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-white px-2 py-1 md:w-44 md:flex-col md:items-stretch md:gap-0.5 md:border-b-0 md:border-r md:px-2 md:py-3" aria-label="Main">
-        <div className="hidden px-2 pb-3 text-sm font-bold tracking-tight md:block">Fleet Console</div>
+      <nav className="flex shrink-0 items-center gap-1 overflow-x-auto bg-chrome px-2 py-1 md:w-48 md:flex-col md:items-stretch md:gap-0.5 md:px-2 md:py-4" aria-label="Main">
+        <div className="hidden items-center gap-2 px-2 pb-4 md:flex"><span className="plate" style={{ ["--c" as string]: "#0b5fff" }}><i /><b>FLEET</b></span><span className="font-display text-lg font-semibold tracking-wide text-white">Console</span></div>
         {NAV.filter((n) => !n.perm || can(n.perm)).map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === "/"}
-            className={({ isActive }) => `flex items-center justify-between whitespace-nowrap rounded px-2.5 py-1.5 text-sm font-medium ${isActive ? "bg-ink text-white" : "text-ink-2 hover:bg-slate-100"}`}>
+            className={({ isActive }) => `flex items-center justify-between whitespace-nowrap rounded px-2.5 py-1.5 text-sm font-medium ${isActive ? "bg-white/[0.14] font-semibold text-white" : "text-slate-300 hover:bg-white/[0.08] hover:text-white"}`}>
             {n.label}
             {n.badge && openAlerts.length > 0 && <span className="num ml-2 rounded-full bg-st-alert px-1.5 text-[11px] font-semibold text-white" aria-label={`${openAlerts.length} open alerts`}>{openAlerts.length}</span>}
           </NavLink>
         ))}
-        <div className="ml-auto hidden border-t border-line pt-3 text-xs md:ml-0 md:mt-auto md:block">
-          <div className="px-2 font-medium">{user?.name}</div>
-          <div className="px-2 pb-2 text-ink-3">{user?.role}</div>
+        <div className="ml-auto hidden border-t border-white/15 pt-3 text-xs md:ml-0 md:mt-auto md:block">
+          <div className="px-2 font-medium text-white">{user?.name}</div>
+          <div className="px-2 pb-2 text-slate-400">{user?.role}</div>
           <button className="btn w-full justify-center" onClick={logout}>Sign out</button>
         </div>
         <button className="btn ml-auto md:hidden" onClick={logout}>Sign out</button>

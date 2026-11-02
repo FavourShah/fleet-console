@@ -5,6 +5,7 @@ import { useAsync } from "../lib/hooks";
 import { useAuth } from "../lib/auth";
 import { useLive } from "../lib/live";
 import { dt, label } from "../lib/format";
+import { alertSummary, alertNextStep, SEV_RANK } from "../lib/alertText";
 import { Empty, ErrorState, Loading, PageHeader, Pill, SeverityBadge } from "../components/ui";
 import RouteMap from "../components/RouteMap";
 import type { Alert } from "../lib/api-types";
@@ -21,7 +22,12 @@ export default function Alerts() {
   const [busy, setBusy] = useState<string>();
   const [actErr, setActErr] = useState<string>();
   const list = useAsync(() => api.alerts({ status, type, limit: 200 }), [status, type]);
-  const rows = useMemo(() => (list.data?.data ?? []).filter((a) => !sev || a.severity === sev), [list.data, sev]);
+  const rows = useMemo(
+    () => (list.data?.data ?? [])
+      .filter((a) => !sev || a.severity === sev)
+      .sort((a, b) => SEV_RANK[b.severity] - SEV_RANK[a.severity] || new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()),
+    [list.data, sev],
+  );
 
   async function ack(a: Alert) {
     setBusy(a.id); setActErr(undefined);
@@ -53,12 +59,11 @@ export default function Alerts() {
           {list.error ? <ErrorState message={list.error} onRetry={list.reload} /> : list.loading && !list.data ? <Loading /> :
             !rows.length ? <Empty text="No alerts match these filters." /> : (
             <table className="w-full">
-              <thead><tr><th className="th">Time</th><th className="th">Vehicle</th><th className="th">Type</th><th className="th">Severity</th><th className="th">Status</th><th className="th" /></tr></thead>
+              <thead><tr><th className="th">Time</th><th className="th">What happened</th><th className="th">Severity</th><th className="th">Status</th><th className="th" /></tr></thead>
               <tbody>{rows.map((a) => (
                 <tr key={a.id} onClick={() => setSel(a)} className={`cursor-pointer hover:bg-slate-50 ${sel?.id === a.id ? "bg-blue-50" : ""}`}>
                   <td className="td num">{dt(a.occurred_at)}</td>
-                  <td className="td font-semibold">{a.plate}</td>
-                  <td className="td">{label(a.type)}{typeof a.evidence?.geofence_name === "string" ? ` · ${a.evidence.geofence_name}` : ""}</td>
+                  <td className="td"><div className="font-medium">{alertSummary(a)}</div><div className="text-xs text-ink-3">{label(a.type)}</div></td>
                   <td className="td"><SeverityBadge s={a.severity} /></td>
                   <td className="td"><Pill tone={a.status === "open" ? "bad" : "neutral"}>{a.status === "acked" ? "Acknowledged" : label(a.status)}</Pill></td>
                   <td className="td text-right">{a.status === "open" && can("ack") && <button className="btn" disabled={busy === a.id} onClick={(e) => { e.stopPropagation(); ack(a); }}>{busy === a.id ? "…" : "Acknowledge"}</button>}</td>
@@ -82,18 +87,19 @@ function Detail({ a, onClose, onAck, busy, canAck }: { a: Alert; onClose: () => 
   return (
     <aside className="flex w-full shrink-0 flex-col border-t border-line bg-white md:w-96 md:border-l md:border-t-0" aria-label="Alert detail">
       <div className="flex items-center justify-between border-b border-line p-3">
-        <div><div className="font-semibold">{label(a.type)}</div><div className="text-xs text-ink-3">{a.plate} · {dt(a.occurred_at)}</div></div>
+        <div><div className="font-semibold">{alertSummary(a)}</div><div className="text-xs text-ink-3">{dt(a.occurred_at)}</div></div>
         <button className="btn" onClick={onClose} aria-label="Close">✕</button>
       </div>
       <div className="h-48 border-b border-line">{lat != null && lon != null ? <RouteMap points={[]} index={0} single={{ lat, lon }} /> : <Empty text="No position for this alert." />}</div>
       <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3 text-sm">
         <div className="flex gap-2"><SeverityBadge s={a.severity} /><Pill tone={a.status === "open" ? "bad" : "neutral"}>{label(a.status)}</Pill></div>
-        {a.acked_at && <div className="text-ink-3">Acknowledged {dt(a.acked_at)}</div>}
+        <p className="rounded bg-slate-50 p-2.5"><b>Next step.</b> {alertNextStep(a)}</p>
+        {a.acked_at ? <div className="text-ink-2">Acknowledged at {dt(a.acked_at)}</div> : <div className="text-ink-2">Not yet acknowledged.</div>}
         <div>Trip: {a.trip_id ? <span className="font-medium">{a.trip_id.slice(0, 8)}…</span> : "—"}{v?.driver_name ? <> · Driver: <span className="font-medium">{v.driver_name}</span></> : null}</div>
-        <div>
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-3">Evidence</div>
-          {Object.keys(ev).length ? <dl className="grid grid-cols-[8rem_1fr] gap-x-2 gap-y-1">{Object.entries(ev).map(([k, val]) => (<Fragment key={k}><dt className="text-ink-3">{label(k)}</dt><dd className="break-words font-medium">{typeof val === "object" ? JSON.stringify(val) : String(val)}</dd></Fragment>))}</dl> : <span className="text-ink-3">None recorded.</span>}
-        </div>
+        <details>
+          <summary className="cursor-pointer text-xs font-semibold text-ink-2">Technical details</summary>
+          {Object.keys(ev).length ? <dl className="mt-2 grid grid-cols-[8rem_1fr] gap-x-2 gap-y-1">{Object.entries(ev).map(([k, val]) => (<Fragment key={k}><dt className="text-ink-3">{label(k)}</dt><dd className="break-words font-medium">{typeof val === "object" ? JSON.stringify(val) : String(val)}</dd></Fragment>))}</dl> : <span className="mt-2 block text-ink-3">None recorded.</span>}
+        </details>
       </div>
       <div className="flex gap-2 border-t border-line p-3">
         <Link className="btn" to={`/playback/${a.vehicle_id}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`}>Replay 30 min</Link>

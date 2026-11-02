@@ -3,7 +3,7 @@ import L from "leaflet";
 import type { Point } from "../lib/api-types";
 
 /** Route line + moving marker for playback / alert detail. */
-export default function RouteMap({ points, index, single }: { points: Point[]; index: number; single?: { lat: number; lon: number } }) {
+export default function RouteMap({ points, index, single, centreN }: { points: Point[]; index: number; single?: { lat: number; lon: number }; centreN?: number }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map>();
   const line = useRef<L.Polyline>();
@@ -37,6 +37,11 @@ export default function RouteMap({ points, index, single }: { points: Point[]; i
     const p = points[index];
     if (p) dot.current?.setLatLng([p.lat, p.lon]);
   }, [index, points]);
+
+  useEffect(() => {
+    const p = points[index];
+    if (centreN && p && map.current) map.current.setView([p.lat, p.lon], Math.max(map.current.getZoom(), 15), { animate: false });
+  }, [centreN]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <div ref={el} className="h-full w-full" />;
 }

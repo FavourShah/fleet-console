@@ -1,5 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
 import type { Geofence, Vehicle } from "../lib/api-types";
 import { STATUS_COLOR, vehicleStatus } from "../lib/format";
 
@@ -19,12 +21,15 @@ interface Props {
   onMapClick?: (lonLat: [number, number]) => void;
   draft?: [number, number][];
   fitGeofences?: boolean;
+  highlightId?: string;
+  /** Group nearby trucks into numbered clusters. */
+  cluster?: boolean;
 }
 
-function icon(text: string, color: string, selected: boolean) {
+function icon(text: string, color: string, selected: boolean, bang: boolean, offline: boolean) {
   return L.divIcon({
     className: "veh-marker",
-    html: `<span style="background:${color};${selected ? "outline:3px solid #0b5fff;" : ""}">${text.replace(/</g, "&lt;")}</span>`,
+    html: `<span class="plate${selected ? " sel" : ""}${offline ? " off" : ""}" style="--c:${color}"><i></i><b>${text.replace(/</g, "&lt;")}${bang ? " !" : ""}</b></span>`,
     iconSize: [0, 0],
   });
 }
@@ -37,6 +42,8 @@ export default function MapView(p: Props) {
   const dLayer = useRef<L.LayerGroup>();
   const markers = useRef<Map<string, L.Marker>>(new Map());
   const fitted = useRef(false);
+  const [layerVer, setLayerVer] = useState(0);
+  const polys = useRef<Map<string, L.Polygon>>(new Map());
   const clickRef = useRef(p.onMapClick);
   clickRef.current = p.onMapClick;
 
@@ -48,12 +55,28 @@ export default function MapView(p: Props) {
       maxZoom: 19,
     }).addTo(m);
     gLayer.current = L.layerGroup().addTo(m);
-    vLayer.current = L.layerGroup().addTo(m);
     dLayer.current = L.layerGroup().addTo(m);
     m.on("click", (e) => clickRef.current?.([e.latlng.lng, e.latlng.lat]));
     map.current = m;
     return () => { m.stop(); m.off(); m.remove(); map.current = undefined; markers.current.clear(); fitted.current = false; };
   }, []);
+
+  // Truck layer: plain group, or numbered clusters when there are many trucks.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const layer: L.LayerGroup = p.cluster
+      ? L.markerClusterGroup({
+          showCoverageOnHover: false, maxClusterRadius: 55, spiderfyOnMaxZoom: true,
+          iconCreateFunction: (c) => L.divIcon({ html: `<span class="cluster">${c.getChildCount()}</span>`, className: "veh-marker", iconSize: [0, 0] }),
+        })
+      : L.layerGroup();
+    layer.addTo(m);
+    vLayer.current = layer;
+    markers.current.clear();
+    setLayerVer((v) => v + 1);
+    return () => { try { m.removeLayer(layer); } catch { /* map already torn down */ } };
+  }, [p.cluster]);
 
   // Vehicles: update markers in place.
   useEffect(() => {
@@ -66,7 +89,7 @@ export default function MapView(p: Props) {
       seen.add(v.id);
       pts.push([v.lat, v.lon]);
       const st = vehicleStatus(v, p.alertIds ?? new Set());
-      const ic = icon(v.plate || v.external_id.slice(-4), STATUS_COLOR[st], v.id === p.selectedId);
+      const ic = icon(v.plate || v.external_id.slice(-4), STATUS_COLOR[st], v.id === p.selectedId, st === "alert", st === "offline");
       let mk = markers.current.get(v.id);
       if (!mk) {
         mk = L.marker([v.lat, v.lon], { icon: ic, keyboard: true, title: `${v.plate} (${st})` }).addTo(layer);
@@ -84,24 +107,33 @@ export default function MapView(p: Props) {
       map.current.fitBounds(L.latLngBounds(pts as L.LatLngTuple[]).pad(0.2), { animate: false });
       fitted.current = true;
     }
-  }, [p.vehicles, p.alertIds, p.selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [p.vehicles, p.alertIds, p.selectedId, layerVer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Geofence polygons.
   useEffect(() => {
     const layer = gLayer.current;
     if (!layer) return;
     layer.clearLayers();
+    polys.current.clear();
     const all: L.LatLngTuple[] = [];
     for (const g of p.geofences ?? []) {
       const ring = g.geometry.coordinates[0]?.map(([lon, lat]) => [lat, lon] as L.LatLngTuple) ?? [];
       if (!ring.length) continue;
       all.push(...ring);
       const c = KIND_COLOR[g.kind] ?? KIND_COLOR.other;
-      L.polygon(ring, { color: c, weight: 2, fillColor: c, fillOpacity: 0.12, dashArray: g.kind === "restricted" ? "6 4" : undefined })
-        .bindTooltip(`${g.name} · ${g.kind}`, { sticky: true }).addTo(layer);
+      const poly = L.polygon(ring, { color: c, weight: 2, fillColor: c, fillOpacity: 0.18, dashArray: g.kind === "restricted" ? "6 4" : undefined })
+        .bindTooltip(g.name, { permanent: true, direction: "center", className: "gf-label" }).addTo(layer);
+      polys.current.set(g.id, poly);
     }
     if (p.fitGeofences && all.length && map.current) map.current.fitBounds(L.latLngBounds(all).pad(0.3), { animate: false });
   }, [p.geofences, p.fitGeofences]);
+
+  // Highlight + zoom to a chosen geofence.
+  useEffect(() => {
+    polys.current.forEach((poly, id) => poly.setStyle({ weight: id === p.highlightId ? 4 : 2, fillOpacity: id === p.highlightId ? 0.32 : 0.18 }));
+    const poly = p.highlightId ? polys.current.get(p.highlightId) : undefined;
+    if (poly && map.current) map.current.fitBounds(poly.getBounds().pad(0.6), { animate: false });
+  }, [p.highlightId, p.geofences]);
 
   // Draft polygon while drawing.
   useEffect(() => {

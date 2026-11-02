@@ -21,7 +21,7 @@ export default function Reports() {
         {r.error ? <ErrorState message={r.error} onRetry={r.reload} /> : r.loading && !d ? <Loading /> : d && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{cards.map(([l, v]) => (
-              <div key={l} className="panel p-4"><div className="text-xs font-medium uppercase tracking-wide text-ink-3">{l}</div><div className="num text-2xl font-semibold">{typeof v === "number" ? v.toLocaleString() : v}</div></div>))}</div>
+              <div key={l} className="panel p-4"><div className="text-xs font-medium text-ink-3">{l}</div><div className="num font-display text-3xl font-semibold">{typeof v === "number" ? v.toLocaleString() : v}</div></div>))}</div>
             <div className="panel p-4">
               <h2 className="mb-3 font-semibold">Alerts by type</h2>
               {!d.alerts_by_type?.length ? <p className="text-sm text-ink-3">No alerts in this range.</p> :
